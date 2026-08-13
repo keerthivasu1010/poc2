@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <CUnit/CUnit.h>
 #include "audit.h"
 #include "bank.h"
@@ -78,6 +80,20 @@ static void test_audit_log_contains_timestamp_brackets(void)
     CU_ASSERT_TRUE(count_lines_containing("[20") >= 1L);
 }
 
+static void test_audit_log_fopen_failure_returns_error(void)
+{
+    (void)remove(AUDIT_LOG_PATH);
+    (void)mkdir(AUDIT_LOG_PATH, 0700);
+
+    CU_ASSERT_EQUAL(audit_log("testuser", "unit-test-marker-epsilon"), -1);
+
+    (void)rmdir(AUDIT_LOG_PATH);
+    {
+        FILE *fp = fopen(AUDIT_LOG_PATH, "a");
+        if (fp != NULL) { (void)fclose(fp); }
+    }
+}
+
 CU_pSuite test_audit_suite_create(void)
 {
     CU_pSuite suite = CU_add_suite("audit", audit_suite_init, audit_suite_cleanup);
@@ -88,6 +104,7 @@ CU_pSuite test_audit_suite_create(void)
     CU_add_test(suite, "NULL username defaults to SYSTEM", test_audit_log_null_username_defaults_to_system);
     CU_add_test(suite, "NULL event handled without crash", test_audit_log_null_event_handled);
     CU_add_test(suite, "entry contains a timestamp", test_audit_log_contains_timestamp_brackets);
+    CU_add_test(suite, "fopen failure returns error", test_audit_log_fopen_failure_returns_error);
 
     return suite;
 }

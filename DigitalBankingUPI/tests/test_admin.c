@@ -124,6 +124,35 @@ static void test_admin_panel_eof_exits_loop(void)
     test_restore_stdin();
 }
 
+static void test_admin_panel_list_users_no_users(void)
+{
+    CU_ASSERT_EQUAL(test_feed_stdin("1\n5\n"), 0);
+    admin_run_panel("admin");
+    test_restore_stdin();
+}
+
+static void test_admin_panel_clear_lockout_unknown_user(void)
+{
+    CU_ASSERT_EQUAL(test_feed_stdin("4\nghost_lockout_xyz\n5\n"), 0);
+    admin_run_panel("admin");
+    test_restore_stdin();
+}
+
+static void test_admin_panel_clear_lockout_eof(void)
+{
+    register_local_user("panvictim2", 100.0);
+    CU_ASSERT_EQUAL(test_feed_stdin("4\n"), 0);
+    admin_run_panel("admin");
+    test_restore_stdin();
+}
+
+static void test_admin_panel_freeze_eof(void)
+{
+    CU_ASSERT_EQUAL(test_feed_stdin("2\n"), 0);
+    admin_run_panel("admin");
+    test_restore_stdin();
+}
+
 CU_pSuite test_admin_suite_create(void)
 {
     CU_pSuite suite = CU_add_suite("admin", admin_suite_init, admin_suite_cleanup);
@@ -137,6 +166,10 @@ CU_pSuite test_admin_suite_create(void)
     CU_add_test(suite, "panel: invalid choice then logout", test_admin_panel_invalid_choice_then_logout);
     CU_add_test(suite, "panel: NULL username returns immediately", test_admin_panel_null_username_returns_immediately);
     CU_add_test(suite, "panel: EOF exits loop", test_admin_panel_eof_exits_loop);
+    CU_add_test(suite, "panel: list users with no users", test_admin_panel_list_users_no_users);
+    CU_add_test(suite, "panel: clear lockout unknown user", test_admin_panel_clear_lockout_unknown_user);
+    CU_add_test(suite, "panel: clear lockout EOF on target", test_admin_panel_clear_lockout_eof);
+    CU_add_test(suite, "panel: freeze EOF on target", test_admin_panel_freeze_eof);
 
     return suite;
 }

@@ -5,6 +5,9 @@
  */
 
 #include <string.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <CUnit/CUnit.h>
 #include "transaction.h"
 #include "storage.h"
@@ -159,6 +162,25 @@ static void test_show_history_counts_matching_transactions(void)
     CU_ASSERT_EQUAL(visited, 0);
 }
 
+static void test_show_history_decryption_error_reported(void)
+{
+    FILE *fp;
+    int visited;
+
+    register_local_user("histuser3", 200.0);
+
+    fp = fopen("database/transactions.dat", "a");
+    CU_ASSERT_PTR_NOT_NULL(fp);
+    if (fp != NULL)
+    {
+        fprintf(fp, "histuser3|histuser4@digitalbank|10.00|2026-01-01 10:00:00|zz|deadbeef\n");
+        (void)fclose(fp);
+    }
+
+    visited = transaction_show_history("histuser3");
+    CU_ASSERT_TRUE(visited >= 1);
+}
+
 CU_pSuite test_transaction_suite_create(void)
 {
     CU_pSuite suite = CU_add_suite("transaction", transaction_suite_init, transaction_suite_cleanup);
@@ -176,6 +198,7 @@ CU_pSuite test_transaction_suite_create(void)
     CU_add_test(suite, "exact-balance transfer allowed", test_transfer_exact_balance_allowed);
     CU_add_test(suite, "history: NULL username", test_show_history_null_username);
     CU_add_test(suite, "history: counts matching transactions", test_show_history_counts_matching_transactions);
+    CU_add_test(suite, "history: decryption error reported", test_show_history_decryption_error_reported);
 
     return suite;
 }

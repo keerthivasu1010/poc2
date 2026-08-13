@@ -3,6 +3,7 @@
  * @brief Unit tests for the integrity module (src/integrity.c).
  */
 
+#include <stdio.h>
 #include <string.h>
 #include <CUnit/CUnit.h>
 #include "integrity.h"
@@ -90,6 +91,25 @@ static void test_integrity_verify_no_transactions(void)
     CU_ASSERT_EQUAL(integrity_verify_user_transactions("user_with_no_txns_xyz"), 0);
 }
 
+static void test_integrity_verify_tampered_transaction(void)
+{
+    FILE *fp;
+    int checked;
+
+    register_local_user("intuser3", 200.0);
+
+    fp = fopen("database/transactions.dat", "a");
+    CU_ASSERT_PTR_NOT_NULL(fp);
+    if (fp != NULL)
+    {
+        fprintf(fp, "intuser3|intuser4@digitalbank|10.00|2026-01-01 10:00:00|zz|deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n");
+        (void)fclose(fp);
+    }
+
+    checked = integrity_verify_user_transactions("intuser3");
+    CU_ASSERT_TRUE(checked >= 1);
+}
+
 CU_pSuite test_integrity_suite_create(void)
 {
     CU_pSuite suite = CU_add_suite("integrity", integrity_suite_init, integrity_suite_cleanup);
@@ -101,6 +121,7 @@ CU_pSuite test_integrity_suite_create(void)
     CU_add_test(suite, "verify: NULL username", test_integrity_verify_null_username);
     CU_add_test(suite, "verify: untampered transaction", test_integrity_verify_untampered_transaction);
     CU_add_test(suite, "verify: no transactions", test_integrity_verify_no_transactions);
+    CU_add_test(suite, "verify: tampered transaction", test_integrity_verify_tampered_transaction);
 
     return suite;
 }

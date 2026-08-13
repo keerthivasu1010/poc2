@@ -156,10 +156,9 @@ int main(void)
         (test_account_suite_create() == NULL) ||
         (test_admin_suite_create() == NULL) ||
         (test_audit_suite_create() == NULL) ||
-        (test_stress_suite_create() == NULL) ||
-        (test_concurrency_suite_create() == NULL) ||
         (test_logger_suite_create() == NULL) ||
-        (test_coverage_extra_suite_create() == NULL))
+        (test_stress_suite_create() == NULL) ||
+        (test_concurrency_suite_create() == NULL))
     {
         fprintf(stderr, "Failed to register one or more test suites: %s\n",
                 CU_get_error_msg());

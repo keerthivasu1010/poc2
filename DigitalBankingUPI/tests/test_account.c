@@ -4,6 +4,8 @@
  */
 
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <CUnit/CUnit.h>
 #include "account.h"
 #include "auth.h"
@@ -128,6 +130,105 @@ static void test_deposit_funds_not_logged_in_rejected(void)
     CU_ASSERT_EQUAL(account_deposit_funds(NULL), -1);
 }
 
+static void test_change_credentials_eof_reading_current_password(void)
+{
+    Session session = register_and_login("acctuser7");
+
+    CU_ASSERT_EQUAL(test_feed_stdin(""), 0);
+    CU_ASSERT_EQUAL(account_change_credentials(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_change_credentials_eof_reading_current_pin(void)
+{
+    Session session = register_and_login("acctuser8");
+
+    CU_ASSERT_EQUAL(test_feed_stdin("GoodPass1\n"), 0);
+    CU_ASSERT_EQUAL(account_change_credentials(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_change_credentials_eof_reading_new_password(void)
+{
+    Session session = register_and_login("acctuser9");
+
+    CU_ASSERT_EQUAL(test_feed_stdin("GoodPass1\n1234\n"), 0);
+    CU_ASSERT_EQUAL(account_change_credentials(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_change_credentials_eof_reading_new_pin(void)
+{
+    Session session = register_and_login("acctuser10");
+
+    CU_ASSERT_EQUAL(test_feed_stdin("GoodPass1\n1234\nNewPass2\n"), 0);
+    CU_ASSERT_EQUAL(account_change_credentials(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_change_credentials_invalid_new_pin_rejected(void)
+{
+    Session session = register_and_login("acctuser11");
+
+    CU_ASSERT_EQUAL(test_feed_stdin("GoodPass1\n1234\nNewPass2\n12\n"), 0);
+    CU_ASSERT_EQUAL(account_change_credentials(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_change_credentials_account_missing_rejected(void)
+{
+    Session session = register_and_login("acctuser12");
+
+    session.currentUser.username[0] = '\0';
+    (void)snprintf(session.currentUser.username, sizeof(session.currentUser.username), "%s", "no-such-user");
+
+    CU_ASSERT_EQUAL(test_feed_stdin("GoodPass1\n1234\nNewPass2\n5678\n"), 0);
+    CU_ASSERT_EQUAL(account_change_credentials(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_change_credentials_storage_error_rejected(void)
+{
+    Session session = register_and_login("acctuser13");
+
+    (void)mkdir("database/users.dat.tmp", 0700);
+    CU_ASSERT_EQUAL(test_feed_stdin("GoodPass1\n1234\nNewPass2\n5678\n"), 0);
+    CU_ASSERT_EQUAL(account_change_credentials(&session), -1);
+    test_restore_stdin();
+    (void)rmdir("database/users.dat.tmp");
+}
+
+static void test_deposit_funds_eof_reading_amount(void)
+{
+    Session session = register_and_login("acctuser14");
+
+    CU_ASSERT_EQUAL(test_feed_stdin(""), 0);
+    CU_ASSERT_EQUAL(account_deposit_funds(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_deposit_funds_account_missing_rejected(void)
+{
+    Session session = register_and_login("acctuser15");
+
+    (void)snprintf(session.currentUser.username, sizeof(session.currentUser.username), "%s", "no-such-user");
+
+    CU_ASSERT_EQUAL(test_feed_stdin("100.00\n"), 0);
+    CU_ASSERT_EQUAL(account_deposit_funds(&session), -1);
+    test_restore_stdin();
+}
+
+static void test_deposit_funds_storage_error_rejected(void)
+{
+    Session session = register_and_login("acctuser16");
+
+    (void)mkdir("database/users.dat.tmp", 0700);
+    CU_ASSERT_EQUAL(test_feed_stdin("100.00\n"), 0);
+    CU_ASSERT_EQUAL(account_deposit_funds(&session), -1);
+    test_restore_stdin();
+    (void)rmdir("database/users.dat.tmp");
+}
+
 CU_pSuite test_account_suite_create(void)
 {
     CU_pSuite suite = CU_add_suite("account", account_suite_init, account_suite_cleanup);
@@ -141,6 +242,16 @@ CU_pSuite test_account_suite_create(void)
     CU_add_test(suite, "deposit: negative amount rejected", test_deposit_funds_negative_amount_rejected);
     CU_add_test(suite, "deposit: zero amount rejected", test_deposit_funds_zero_amount_rejected);
     CU_add_test(suite, "deposit: not logged in rejected", test_deposit_funds_not_logged_in_rejected);
+    CU_add_test(suite, "change credentials: EOF reading current password", test_change_credentials_eof_reading_current_password);
+    CU_add_test(suite, "change credentials: EOF reading current PIN", test_change_credentials_eof_reading_current_pin);
+    CU_add_test(suite, "change credentials: EOF reading new password", test_change_credentials_eof_reading_new_password);
+    CU_add_test(suite, "change credentials: EOF reading new PIN", test_change_credentials_eof_reading_new_pin);
+    CU_add_test(suite, "change credentials: invalid new PIN rejected", test_change_credentials_invalid_new_pin_rejected);
+    CU_add_test(suite, "change credentials: missing account rejected", test_change_credentials_account_missing_rejected);
+    CU_add_test(suite, "change credentials: storage error rejected", test_change_credentials_storage_error_rejected);
+    CU_add_test(suite, "deposit: EOF reading amount", test_deposit_funds_eof_reading_amount);
+    CU_add_test(suite, "deposit: missing account rejected", test_deposit_funds_account_missing_rejected);
+    CU_add_test(suite, "deposit: storage error rejected", test_deposit_funds_storage_error_rejected);
 
     return suite;
 }

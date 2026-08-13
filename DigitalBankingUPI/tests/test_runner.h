@@ -18,9 +18,8 @@ CU_pSuite test_integrity_suite_create(void);
 CU_pSuite test_account_suite_create(void);
 CU_pSuite test_admin_suite_create(void);
 CU_pSuite test_audit_suite_create(void);
+CU_pSuite test_logger_suite_create(void);
 CU_pSuite test_stress_suite_create(void);
 CU_pSuite test_concurrency_suite_create(void);
-CU_pSuite test_logger_suite_create(void);
-CU_pSuite test_coverage_extra_suite_create(void);
 
 #endif /* TEST_RUNNER_H */
